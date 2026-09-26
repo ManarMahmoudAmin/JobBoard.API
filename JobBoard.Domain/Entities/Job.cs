@@ -36,12 +36,12 @@ namespace JobBoard.Domain.Entities
 
 
         /*------------------------Applications--------------------------*/
-        public ICollection<Application>? JobApplications { get; set; }
+        public ICollection<CandidateApplication>? JobApplications { get; set; }
 
-        /*------------------------Employer--------------------------*/
+        /*------------------------Recruiter--------------------------*/
         [ForeignKey("UserProfile")]
-        public int EmployerId { get; set; }
-        public RecruiterProfile Employer { get; set; }
+        public int RecruiterId { get; set; }
+        public RecruiterProfile Recruiter { get; set; }
 
         /*------------------------Skills--------------------------*/
         public ICollection<Skill> Skills { get; set; } = new List<Skill>();

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace JobBoard.Domain.Entities
 {
-    public class Application
+    public class CandidateApplication
     {
         public int Id { get; set; }
 

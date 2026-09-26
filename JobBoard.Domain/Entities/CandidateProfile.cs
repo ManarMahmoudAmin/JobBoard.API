@@ -11,7 +11,6 @@ namespace JobBoard.Domain.Entities
     public class CandidateProfile 
     {
         public int Id { get; set; }
-
         public string? Name { get; set; }
         public string? Title { get; set; }
         public DateTime? DateOfBirth { get; set; }
@@ -29,7 +28,7 @@ namespace JobBoard.Domain.Entities
         public ApplicationUser User { get; set; }
 
         /*------------------------Application--------------------------*/
-        public List<Application>? UserApplications { get; set; }
+        public List<CandidateApplication>? UserApplications { get; set; }
 
 		/*------------------------Skills--------------------------*/
 		public ICollection<Skill>? Skills { get; set; } = new List<Skill>();

@@ -1,0 +1,38 @@
+﻿namespace JobBoard.API.Extensions
+{
+    public static class CacheExtensions   
+    {
+        public static IServiceCollection AddCacheServices(this IServiceCollection services, IConfiguration configuration)
+        {
+            // Add Redis Output Caching  
+            services.AddStackExchangeRedisOutputCache(options =>
+            {
+                options.Configuration = configuration.GetConnectionString("Redis");
+            });
+
+            // Define Cache Policies  
+            services.AddOutputCache(options =>
+            {
+                options.AddPolicy("JobsCache", builder =>
+                    builder
+                        .Expire(TimeSpan.FromSeconds(300))
+                        .Tag("jobs")
+                        .SetVaryByQuery("*")); // Cache for 300 seconds, vary by all query params  
+
+                options.AddPolicy("AdminCache", builder =>
+                    builder
+                        .Expire(TimeSpan.FromSeconds(200))
+                        .Tag("admin")
+                        .SetVaryByQuery("*")); // Cache for 200 seconds  
+
+                options.AddPolicy("NotificationsCache", builder =>
+                    builder
+                        .Expire(TimeSpan.FromSeconds(150))
+                        .Tag("notifications")
+                        .SetVaryByQuery("*")); // Cache for 150 seconds  
+            });
+
+            return services;
+        }
+    }
+}

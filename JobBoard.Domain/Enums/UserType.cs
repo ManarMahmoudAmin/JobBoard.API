@@ -8,6 +8,6 @@ namespace JobBoard.Domain.Enums
 {
     public enum UserType
     {
-        Employer, Candidate, Admin
+        Recruiter, Candidate, Admin
     }
 }

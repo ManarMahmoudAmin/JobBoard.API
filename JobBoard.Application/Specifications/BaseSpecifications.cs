@@ -1,0 +1,68 @@
+﻿using JobBoard.Application.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Text;
+
+namespace JobBoard.Application.Specifications
+{
+    public abstract class BaseSpecifications<TEntity> : ISpecifications<TEntity> where TEntity : class
+    {
+        protected BaseSpecifications()
+        {
+
+        }
+        protected BaseSpecifications(Expression<Func<TEntity, bool>> criteriaExp)
+        {
+            Criteria = criteriaExp;
+        }
+
+        public Expression<Func<TEntity, bool>>? Criteria { get; private set; }
+        public List<Expression<Func<TEntity, object>>> Includes { get; } = [];
+        public Expression<Func<TEntity, object>> Order { get; private set; }
+        public Expression<Func<TEntity, object>> OrderDesc { get; private set; }
+        public List<Expression<Func<TEntity, object>>> ThenBy { get; } = [];
+        public List<Expression<Func<TEntity, object>>> ThenByDesc { get; } = [];
+
+        public int Skip { get; set; }
+        public int Take { get; set; }
+        public bool IsPaginationEnabled { get; set; } = false;
+
+
+        protected void AddIncludes(Expression<Func<TEntity, object>> include)
+        {
+            if (include is not null)
+                Includes.Add(include);
+        }
+
+        protected void AddOrderBy(Expression<Func<TEntity, object>> order)
+        {
+            if (order is not null)
+                Order = order;
+        }
+
+        protected void AddOrderByDesc(Expression<Func<TEntity, object>> orderDesc)
+        {
+            if (orderDesc is not null)
+                OrderDesc = orderDesc;
+        }
+        protected void AddThenBy(Expression<Func<TEntity, object>> thenByExp)
+        {
+            if (thenByExp is not null)
+                ThenBy.Add(thenByExp);
+        }
+
+        protected void AddThenByDesc(Expression<Func<TEntity, object>> thenByDescExp)
+        {
+            if (thenByDescExp is not null)
+                ThenByDesc.Add(thenByDescExp);
+        }
+
+        protected void AddPagination(int skip, int take)
+        {
+            Skip = skip;
+            Take = take;
+            IsPaginationEnabled = true;
+        }
+    }
+}

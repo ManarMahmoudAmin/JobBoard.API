@@ -9,8 +9,8 @@ namespace JobBoard.Domain.Entities
 {
     public class RecruiterProfile
     {
-		public int Id { get; set; }
-		public string CompanyName { get; set; }
+        public int Id { get; set; }
+        public string CompanyName { get; set; }
 		public string CompanyLocation { get; set; }
 		public string? CompanyImage  { get; set; }
 		public string? Website { get; set; }
@@ -25,7 +25,7 @@ namespace JobBoard.Domain.Entities
 
         /*------------------------user--------------------------*/
         [ForeignKey("User")]
-		public string? UserId { get; set; }
+		public string UserId { get; set; }
 		public ApplicationUser User { get; set; }
 
 		/*------------------------job--------------------------*/
