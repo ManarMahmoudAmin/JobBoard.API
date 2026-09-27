@@ -1,6 +1,17 @@
 ﻿using JobBoard.Application.DTOs.CandidateApplicationDTOs;
+using JobBoard.Application.Features.CandidatApplications.Commands.CreateApplication;
+using JobBoard.Application.Features.CandidatApplications.Commands.DeleteApplication;
+using JobBoard.Application.Features.CandidatApplications.Commands.UpdateApplicationStatus;
+using JobBoard.Application.Features.CandidatApplications.Query.GetApplicationById;
+using JobBoard.Application.Features.CandidatApplications.Query.GetApplicationsByApplicantId;
+using JobBoard.Application.Features.CandidatApplications.Query.GetApplicationsByJobId;
+using JobBoard.Application.Features.CandidatApplications.Query.GetApplicationsForRecruiterJobs;
+using JobBoard.Application.Features.CandidatApplications.Query.HasUserAppliedToJob;
+using JobBoard.Application.Features.Candidate.Query.GetByUserId;
+using JobBoard.Application.Features.Recruiter.Query.GetByUserIdForRecruiter;
 using JobBoard.Application.Interfaces;
 using JobBoard.Application.Shared;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -11,17 +22,16 @@ namespace JobBoard.API.Controllers
 	[ApiController]
 	public class ApplicationController : ControllerBase
 	{
-		private readonly IApplicationService _applicationService;
-		private readonly ICandidateService _CandidateService;
-		private readonly IRecruiterService _RecruiterService;
+		//private readonly IApplicationService _applicationService;
+		//private readonly ICandidateService _candidateService;
+		//private readonly IRecruiterService _recruiterService;
+		private readonly IMediator _mediator;
 
 		private string? userId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-		public ApplicationController(IApplicationService applicationService, ICandidateService CandidateService, IRecruiterService RecruiterService)
+		public ApplicationController(IMediator mediator)
 		{
-			_applicationService = applicationService;
-			_CandidateService = CandidateService;
-			_RecruiterService = RecruiterService;
+			_mediator = mediator;
 		}
 
 		//--------------------------Candidate----------------------
@@ -41,12 +51,18 @@ namespace JobBoard.API.Controllers
 			if (userId == null)
 				return Unauthorized();
 
-			var CandidateProfile = await _CandidateService.GetByUserIdAsync(userId);
-			if (CandidateProfile == null)
+			//var CandidateProfile = await _candidateService.GetByUserIdAsync(userId);
+			var CandidateProfile = await _mediator.Send(new GetByUserIdQuery(userId));
+
+            if (CandidateProfile == null)
 				return Unauthorized("Candidate profile not found");
 
-			var createdApplication = await _applicationService.CreateApplicationAsync(createDto, CandidateProfile.Id);
-			if (createdApplication == null)
+			//var createdApplication = await _applicationService.CreateApplicationAsync(createDto, CandidateProfile.Id);
+			var createdApplication = await _mediator.
+				Send(new CreateApplicationCommand(createDto, CandidateProfile.Id));
+
+
+            if (createdApplication == null)
 				return BadRequest("Unable to create application. You may have already applied to this job or the job doesn't exist.");
 
 			return CreatedAtAction(nameof(GetApplicationById), new { id = createdApplication.Id }, createdApplication);
@@ -61,12 +77,17 @@ namespace JobBoard.API.Controllers
 			if (userId == null)
 				return Unauthorized();
 
-			var CandidateProfile = await _CandidateService.GetByUserIdAsync(userId);
-			if (CandidateProfile == null)
+            var CandidateProfile = await _mediator.Send(new GetByUserIdQuery(userId));
+            if (CandidateProfile == null)
 				return Unauthorized("Candidate profile not found");
 
-			var applications = await _applicationService.GetApplicationsByApplicantIdAsync(CandidateProfile.Id);
-			return Ok(applications);
+			//var applications = await _applicationService.GetApplicationsByApplicantIdAsync(CandidateProfile.Id);
+			var applications = await _mediator.Send(new GetApplicationsByApplicantIdQuery()
+			{
+				ApplicantId = CandidateProfile.Id
+			});
+
+            return Ok(applications);
 		}
 
 		/// Checks if the current Candidate has already applied to a specific job
@@ -81,13 +102,19 @@ namespace JobBoard.API.Controllers
 			if (userId == null)
 				return Unauthorized();
 
-			var CandidateProfile = await _CandidateService.GetByUserIdAsync(userId);
-			if (CandidateProfile == null)
+            var CandidateProfile = await _mediator.Send(new GetByUserIdQuery(userId));
+            if (CandidateProfile == null)
 				return Unauthorized("Candidate profile not found");
 
-			var hasApplied = await _applicationService.
-				HasUserAppliedToJobAsync(CandidateProfile.Id, jobId);
-			return Ok(hasApplied);
+			//var hasApplied = await _applicationService.
+			//	HasUserAppliedToJobAsync(CandidateProfile.Id, jobId);
+			var hasApplied = await _mediator.Send(new HasUserAppliedToJobQuery()
+			{
+				ApplicantId = CandidateProfile.Id,
+				JobId = jobId
+            });
+
+            return Ok(hasApplied);
 		}
 
 		//--------------------------Recruiter----------------------
@@ -102,12 +129,19 @@ namespace JobBoard.API.Controllers
 			if (userId == null)
 				return Unauthorized();
 
-			var RecruiterProfile = await _RecruiterService.GetByUserId(userId);
-			if (RecruiterProfile == null)
+            //var RecruiterProfile = await _recruiterService.GetByUserId(userId);
+            var RecruiterProfile = await _mediator.Send(new GetByUserIdForRecruiterQuery()
+			{
+				UserId = userId
+			});
+
+            if (RecruiterProfile == null)
 				return Unauthorized("Recruiter profile not found");
 
-			var applications = await _applicationService.GetApplicationsForRecruiterJobsAsync(RecruiterProfile.Id, filterParams);
-			return Ok(applications);
+			//var applications = await _applicationService.GetApplicationsForRecruiterJobsAsync(RecruiterProfile.Id, filterParams);
+			var applications = await _mediator.Send(new GetApplicationsForRecruiterJobsQuery(RecruiterProfile.Id, filterParams));
+
+            return Ok(applications);
 		}
 
 		/// Get all applications for a specific job posted by the current Recruiter
@@ -122,16 +156,26 @@ namespace JobBoard.API.Controllers
 			if (userId == null)
 				return Unauthorized();
 
-			var RecruiterProfile = await _RecruiterService.GetByUserId(userId);
+            var RecruiterProfile = await _mediator.Send(new GetByUserIdForRecruiterQuery()
+            {
+                UserId = userId
+            }); 
 			if (RecruiterProfile == null)
 				return Unauthorized("Recruiter profile not found");
 
-			var applications = await _applicationService.GetApplicationsByJobIdAsync(jobId, RecruiterProfile.Id);
-			return Ok(applications);
+			//var applications = await _applicationService.GetApplicationsByJobIdAsync(jobId, RecruiterProfile.Id);
+
+			var applications = await _mediator.Send(new GetApplicationsByJobIdQuery()
+			{
+				JobId = jobId,
+				RecruiterId = RecruiterProfile.Id
+            });
+
+            return Ok(applications);
 		}
 		/// Update the status of an application 
 		// PUT: api/application/status/{id}
-		[HttpPut("status/{id:int}")]
+		[HttpPut("Status/{id:int}")]
 		[Authorize(Roles = "Recruiter")]
 		public async Task<IActionResult> UpdateApplicationStatus(int id, [FromBody] UpdateApplicationStatusDto statusDto)
 		{
@@ -144,12 +188,22 @@ namespace JobBoard.API.Controllers
 			if (userId == null)
 				return Unauthorized();
 
-			var RecruiterProfile = await _RecruiterService.GetByUserId(userId);
+            var RecruiterProfile = await _mediator.Send(new GetByUserIdForRecruiterQuery()
+            {
+                UserId = userId
+            }); 
 			if (RecruiterProfile == null)
 				return Unauthorized("Recruiter profile not found");
 
-			var updated = await _applicationService.UpdateApplicationStatusAsync(id, statusDto.Status, RecruiterProfile.Id);
-			if (!updated)
+			//var updated = await _applicationService.UpdateApplicationStatusAsync(id, statusDto.Status, RecruiterProfile.Id);
+			var updatedApplication = await _mediator.Send(new UpdateApplicationStatusCommand()
+			{
+				ApplicationId = id,
+				RecruiterId = RecruiterProfile.Id,
+				Status = statusDto.Status
+			});
+
+            if (!updatedApplication)
 				return NotFound("Application not found or you don't have permission to update it.");
 
 			return NoContent();
@@ -166,8 +220,9 @@ namespace JobBoard.API.Controllers
 			if (id <= 0)
 				return BadRequest("Invalid application Id.");
 
-			var deleted = await _applicationService.DeleteApplicationAsync(id);
-			if (!deleted)
+			//var deleted = await _applicationService.DeleteApplicationAsync(id);
+			var deletedApplication = await _mediator.Send(new DeleteApplicationCommand(id));
+            if (!deletedApplication)
 				return NotFound("Application not found.");
 
 			return NoContent();
@@ -184,7 +239,11 @@ namespace JobBoard.API.Controllers
 			if (id <= 0)
 				return BadRequest("Invalid application Id.");
 
-			var application = await _applicationService.GetApplicationByIdAsync(id);
+			//var application = await _applicationService.GetApplicationByIdAsync(id);
+			var application = await _mediator.Send(new GetApplicationByIdQuery()
+			{
+				Id = id
+			});
 			if (application == null)
 				return NotFound("Application not found.");
 
@@ -194,14 +253,17 @@ namespace JobBoard.API.Controllers
 
 			if (User.IsInRole("Candidate"))
 			{
-				var CandidateProfile = await _CandidateService.GetByUserIdAsync(userId);
-				if (CandidateProfile != null && application.ApplicantId == CandidateProfile.Id)
+                var CandidateProfile = await _mediator.Send(new GetByUserIdQuery(userId));
+                if (CandidateProfile != null && application.ApplicantId == CandidateProfile.Id)
 					return Ok(application);
 			}
 
 			if (User.IsInRole("Recruiter"))
 			{
-				var RecruiterProfile = await _RecruiterService.GetByUserId(userId);
+                var RecruiterProfile = await _mediator.Send(new GetByUserIdForRecruiterQuery()
+                {
+                    UserId = userId
+                }); 
 				if (RecruiterProfile != null && application.Job?.RecruiterId == RecruiterProfile.Id)
 					return Ok(application);
 			}
